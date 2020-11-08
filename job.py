@@ -50,3 +50,14 @@ class Job:
         if self.responsive:
             overview += f"Responsive: {self.responsive}"
         return overview
+
+    def as_dict(self):
+        return {'title': self.title,
+                'company': self.company,
+                'location': self.location,
+                'job_description': self.job_description,
+                'is_responsive': self.responsive,
+                'salary_base': self.salary_base,
+                'salary_upper': self.salary_upper,
+                'job_type': self.job_type
+                }

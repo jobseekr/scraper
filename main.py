@@ -16,7 +16,6 @@ load_dotenv()
 
 # defaults
 start_url = "https://ca.indeed.com/browsejobs"
-test_start_url = "https://ca.indeed.com/jobs?q=Software+Developer+$123,000&l=Toronto,+ON&start=80"
 
 
 def set_chrome_options(env: str) -> Options:
@@ -112,6 +111,8 @@ def main() -> None:
         print(f"\n############# {curr_page + 1} #############")
         if not has_next(driver):
             break
+
+    print(paginated_jobs)
 
 
 if __name__ == '__main__':
