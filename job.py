@@ -4,8 +4,13 @@ from decimal import Decimal
 
 class Job:
 
-    def __parse_extras(self, line: str):
-        job_types = ["Full-time", "Freelance", "Apprenticeship", "Volunteer", "Casual", "Comission", "Fly-In/Fly-Out",
+    def __parse_extras(self, line: str) -> None:
+        """
+        Parse extra fields from a full Job info
+        :param line: single line from job info chunk
+        :return:
+        """
+        job_types = ["Full-time", "Freelance", "Apprenticeship", "Volunteer", "Casual", "Commission", "Fly-In/Fly-Out",
                      "Contract", "Part-time", "Permanent", "Internship", "Temporary", "Temporarily remote", "Remote"]
         salary_info = line.split('-')
         currency = [s for s in salary_info if "$" in s]
@@ -17,6 +22,14 @@ class Job:
         self.job_type = None if "-".join(job_types) == '' else "-".join(job_types)
 
     def __init__(self, title: str, company: str, location: str, job_description: str, extra_info: str):
+        """
+        Initialization of Job objects
+        :param title:
+        :param company:
+        :param location:
+        :param job_description:
+        :param extra_info:
+        """
         # initialization handles sanitization of data
         self.title = title
         self.company = company
@@ -36,10 +49,18 @@ class Job:
         else:
             self.__parse_extras(last_line)
 
-    def get_description(self):
+    def get_description(self) -> str:
+        """
+        Get just the description of a job object.
+        :return:
+        """
         return f"{self.job_description}"
 
-    def get_overview(self):
+    def get_overview(self) -> str:
+        """
+        Get a nicely formatted overview of all the available fields parsed from a job by the scraper.
+        :return:
+        """
         overview = f"Title: {self.title}\nCompany: {self.company} | Location: {self.location}\n"
         if self.salary_base is not None:
             overview += f"Salary base: {self.salary_base}\n"
@@ -51,13 +72,18 @@ class Job:
             overview += f"Responsive: {self.responsive}"
         return overview
 
-    def as_dict(self):
-        return {'title': self.title,
-                'company': self.company,
-                'location': self.location,
-                'job_description': self.job_description,
-                'is_responsive': self.responsive,
-                'salary_base': self.salary_base,
-                'salary_upper': self.salary_upper,
-                'job_type': self.job_type
-                }
+    def as_dict(self) -> dict:
+        """
+        Method to convert a job obj to a dict for pandas
+        :return:
+        """
+        return dict(
+            title=self.title,
+            company=self.company,
+            location=self.location,
+            job_description=self.job_description,
+            is_responsive=self.responsive,
+            salary_base=self.salary_base,
+            salary_upper=self.salary_upper,
+            job_type=self.job_type
+        )
