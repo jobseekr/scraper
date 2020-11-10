@@ -7,11 +7,12 @@ Scrape jobs off of Canadian Indeed
 
 from datetime import datetime, timedelta
 from os import path, getenv, remove, chdir
+import logging
 import glob
 
 from dotenv import load_dotenv
 from selenium import webdriver
-from time import sleep, time
+from time import sleep
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -25,6 +26,8 @@ import random
 
 load_dotenv()
 start_url = "https://ca.indeed.com/browsejobs"
+log_file = f"logs/run-{datetime.now()}.log"
+logging.basicConfig(filename=log_file, level=logging.INFO)
 
 
 def set_chrome_options(env: str) -> Options:
@@ -45,21 +48,23 @@ def set_chrome_options(env: str) -> Options:
     return chrome_options
 
 
-def search_job(web_driver: WebDriver, what: str, where: str) -> None:
+def search_job(what: str, where: str) -> WebDriver:
     """
     Searches Indeed for a particular job (what) for a particular location (where).
-    :param web_driver: Selenium driver object
     :param what: The job user queries for
     :param where: The location user queries for
     :return:
     """
     try:
-        job_title_input = web_driver.find_element_by_id("what")
-        location_input = web_driver.find_element_by_id("where")
+        driver = webdriver.Chrome(getenv("WEBDRIVER_PATH"), options=set_chrome_options(getenv("ENVIRONMENT")))
+        driver.get(start_url)
+        job_title_input = driver.find_element_by_id("what")
+        location_input = driver.find_element_by_id("where")
         job_title_input.send_keys(what)
         location_input.send_keys(where)
-        web_driver.find_element_by_id("fj").click()
-        web_driver.implicitly_wait(10)
+        driver.find_element_by_id("fj").click()
+        driver.implicitly_wait(10)
+        return driver
     except Exception as err:
         print(f"Error Searching Job {what} in {where}: " + str(err))
 
@@ -77,7 +82,7 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
         jobs = []
         for title in tqdm(search_items):
             title.find_element_by_xpath('..').click()
-            job_container = WebDriverWait(web_driver, 15).until(
+            job_container = WebDriverWait(web_driver, 5).until(
                 EC.presence_of_element_located((By.ID, "vjs-container"))
             )
             info_container = job_container.find_element_by_id("vjs-jobinfo")
@@ -91,39 +96,53 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
             # create new Job object
             a_job = Job(job_title, job_cp, job_loc, job_desc, full_chunk)
             jobs.append(a_job.as_dict())
-            # sleep(random.randint(1, 4))
+            sleep(random.randint(1, 3))
         return jobs
     except Exception as err:
         print(f"Error retrieving job info: " + str(err))
 
 
-def has_next(web_driver: WebDriver) -> bool:
+def has_next(web_driver: WebDriver) -> tuple:
     """
     Check to see if next page exists. If it does, navigate to it.
     :param web_driver: Selenium webdriver object
     :return: True/False based on next page condition
     """
     try:
+        popup_handler(web_driver)
         next_page = web_driver.find_element_by_xpath("//a[@aria-label='Next']")
         if next_page.size != 0:
-            next_page.click()
-            popup_container = WebDriverWait(web_driver, 10).until(
-                EC.presence_of_element_located((By.ID, "popover-foreground"))
-            )
-            popup_container.find_element_by_xpath("//button[@aria-label='Close']").click()
-            return True
+            return True, next_page
     except Exception as err:
-        print(f"\nReached end of pagination. " + str(err))
-        return False
+        print(f"\nReached end of pagination. {err}")
+        return False, None
 
 
-def save_run_data(total_jobs: list, pages_wanted: int, job: str, location: str) -> str:
+def popup_handler(web_driver: WebDriver) -> None:
+    """
+    A method to handle pesky popups that come up during a scraping job on indeed
+    :param web_driver:
+    :return:
+    """
+    try:
+        # check if there's a popup upon hitting the new page
+        popup_container = WebDriverWait(web_driver, 5).until(
+            EC.presence_of_element_located((By.ID, "popover-foreground"))
+        )
+        # if there is, close it and continue as usual
+        if popup_container.size != 0:
+            popup_container.find_element_by_xpath("//button[@aria-label='Close']").click()
+    except Exception as err:
+        print(f"\nPopup Handler {err}")
+
+
+def save_run_data(total_jobs: list, pages_scraped: int, job: str, location: str) -> str:
     """
     Save scraped jobs from a particular run to minimize repeated scrapes.
     :param location:
     :param job:
     :param total_jobs:
-    :param pages_wanted:
+    :param pages_scraped:
     :return:
     """
     # create data folder
@@ -135,7 +154,7 @@ def save_run_data(total_jobs: list, pages_wanted: int, job: str, location: str) 
     # naming convention
     file_path = "scrape"
     file_path += datetime.now().strftime("_%d-%m-%Y_%H-%M-%S")
-    file_path += f"_{pages_wanted}-pgs"
+    file_path += f"_{pages_scraped}-pgs"
 
     # save as a serialized pickle file
     jobs_df.to_pickle(file_path)
@@ -152,17 +171,16 @@ def read_last_run(job: str, location: str) -> str:
     latest_file = None
     if existing_files:
         print("Found previous runs, preloading most recent/optimal data...\n")
-        # latest arbitrary run
-        latest_file = max(existing_files, key=path.getctime)
+        max_pgs_scraped = 0
+        for file in existing_files:
+            curr_file_pgs = int(file.split('_')[3].split('-')[0])
+            if max_pgs_scraped < curr_file_pgs:
+                max_pgs_scraped = curr_file_pgs
+                latest_file = file
 
-        # check for a recent full-run
-        full_run_files = [s for s in existing_files if '100-pgs' in s.split('_')[3]]
-        if full_run_files:
-            latest_file = max(full_run_files, key=path.getctime)
-
-        # check to see if all data was recently acquired (~ 5 hours)
+        # check to see if all data was recently acquired (~ 3 hours)
         latest_file_datetime = datetime.fromtimestamp(path.getctime(latest_file))
-        check_date = datetime.now() - timedelta(hours=5)
+        check_date = datetime.now() - timedelta(hours=3)
 
         # if date of creation of our data is older than 5 hours from present, get fresh data
         if latest_file_datetime < check_date:
@@ -170,7 +188,8 @@ def read_last_run(job: str, location: str) -> str:
             latest_file = None
 
         # also automatically purge older data files
-        if len(existing_files) > 5:
+        if len(existing_files) > 2:
+            print("Cleaning up and removing some older/unused files...\n")
             oldest_file = min(existing_files, key=path.getctime)
             remove(oldest_file)
 
@@ -187,26 +206,49 @@ def load_jobs_from_file(file_path: str) -> pd.DataFrame:
     return job_df
 
 
-def scrape_jobs(job: str, location: str) -> tuple:
+def searchable_items(web_driver: WebDriver) -> list:
+    """
+    Finds list of searchable web element items to interact with in order to grab description data
+    :param web_driver:
+    :return:
+    """
+    # check if any popover elements are up and close them
+    # otherwise retrieve all searchable links
+    try:
+        # first check of any pesky popovers and close them
+        popup_handler(web_driver)
+        # then attempt to populate search results
+        search_results = web_driver.find_elements_by_xpath("//a[@data-tn-element='jobTitle']")
+        return search_results
+    except Exception as err:
+        print(f"\nCould not find job-titles from search " + str(err))
+
+
+def scrape_jobs(job: str, location: str, total_pages: int) -> tuple:
     """
     Call the webdriver and start the scraping process for fresh batch of job data
     :return: tuple of list of jobs and total pages to scrape provided by user
     """
     # initialize
     all_jobs = []
-    total_pages = int(getenv("PAGES")) or 100
-    driver = webdriver.Chrome(getenv("WEBDRIVER_PATH"), options=set_chrome_options(getenv("ENVIRONMENT")))
-    driver.get(start_url)
 
     # Main Search
-    search_job(driver, job, location)
+    driver = search_job(job, location)
 
     # Every job title in a page
     for curr_page in range(0, total_pages):
+        start_time = datetime.now()
         print(f"\nGathering data from page {curr_page + 1} of {total_pages}...\n")
-        search_items_per_page = driver.find_elements_by_xpath("//a[@data-tn-element='jobTitle']")
-        all_jobs.extend(get_per_page_info(driver, search_items_per_page))
-        if not has_next(driver):
+        search_results = searchable_items(driver)
+        all_jobs.extend(get_per_page_info(driver, search_results))
+        has_next_page, next_locator = has_next(driver)
+        elapsed_time = datetime.now()-start_time
+        logging.info(f"Page {curr_page+1} done in {elapsed_time.total_seconds()}s")
+        if has_next_page:
+            next_locator.click()
+            continue
+        else:
+            total_pages = curr_page+1
             driver.quit()
             break
 
@@ -219,6 +261,7 @@ def main() -> None:
     """
     # init
     jobs_df = None
+    pages_to_scrape = int(getenv("PAGES") or 100)
     # if prev runs exist, load data instead of scraping
     job, location = "Software Developer", "Toronto, ON"
     latest_file_path = read_last_run(job, location)
@@ -227,7 +270,7 @@ def main() -> None:
         jobs_df = load_jobs_from_file(latest_file_path)
     else:
         # run scraper and destructure out data for other functions
-        all_jobs, total_pages = scrape_jobs(job, location)
+        all_jobs, total_pages = scrape_jobs(job, location, pages_to_scrape)
         # save all data from a run
         data_file = save_run_data(all_jobs, total_pages, job, location)
         jobs_df = load_jobs_from_file(data_file)
