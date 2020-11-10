@@ -180,9 +180,10 @@ def read_last_run(job: str, location: str) -> str:
 
         # check to see if all data was recently acquired (~ 3 hours)
         latest_file_datetime = datetime.fromtimestamp(path.getctime(latest_file))
+        print(f"Max pages scraped is {max_pgs_scraped} on {latest_file_datetime}\n")
         check_date = datetime.now() - timedelta(hours=3)
 
-        # if date of creation of our data is older than 5 hours from present, get fresh data
+        # if date of creation of our data is older than 3 hours from present, get fresh data
         if latest_file_datetime < check_date:
             print("Data is stale, fetching new data...\n")
             latest_file = None
