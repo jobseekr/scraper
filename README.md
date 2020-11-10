@@ -54,7 +54,7 @@ INFO:root:Page 2 done in 48.49284s
 As visible, there are simple optimizations to prevent the scraper from getting blocked/throttled by indeed.  
 If a page scrape takes roughly `52s`, a 90 page scrape (most I've run) of `"Software Developer"` jobs in `"Toronto, ON"` will run for roughly `1.32 hrs`.
 
-I don't advise it, but you can play around with line 99 to speed up this process a LOT more by either reducing or completely eliminating `sleep`
+I don't advise it, but you can play around with [line 99](https://github.com/jobseekr/scraper/blob/cecbcc94a38766f25f57a8c02d5ac3d6ead3819b/main.py#L99) to speed up this process a LOT more by either reducing or completely eliminating `sleep`
 
 #### Author
 
