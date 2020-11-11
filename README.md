@@ -1,4 +1,4 @@
-# Scraper
+# Job Seeker
 
 A scraper to find job listings and their descriptions.
 
@@ -7,10 +7,18 @@ Currently supported websites:
 
 ## Setup
 
+#### Scraper Standalone
+
 1. Create a virtual env for the project `python -m venv venv`
 2. Install the requirements `pip install -r requirements.txt`
 3. Create an env file at the project root using `touch .env` and add variables as per `.env.example` to configure
-4. Run `main.py`
+4. Run `scraper.py`
+
+#### Dash Web App
+
+1. Run `seeker.py`
+2. Type in your params (these is a direct representation of the `.env` params) and click search.
+
 
 ## Directory Structure
 
@@ -34,7 +42,8 @@ should emit the following directory structure
 ├── job.py
 ├── logs
 │   └── run-2020-11-10\ 06:50:20.597174.log
-├── main.py
+├── scraper.py
+├── seeker.py
 ├── requirements.txt
 └── utils
     └── chromedriver

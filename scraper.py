@@ -26,8 +26,6 @@ import random
 
 load_dotenv()
 start_url = "https://ca.indeed.com/browsejobs"
-log_file = f"logs/run-{datetime.now()}.log"
-logging.basicConfig(filename=log_file, level=logging.INFO)
 
 
 def set_chrome_options(env: str) -> Options:
@@ -136,33 +134,42 @@ def popup_handler(web_driver: WebDriver) -> None:
         print(f"\nPopup Handler {err}")
 
 
-def save_run_data(total_jobs: list, pages_scraped: int, job: str, location: str) -> str:
+def save_run_data(total_jobs: list, pages_wanted: int, pages_got: int, job: str, location: str) -> str:
     """
     Save scraped jobs from a particular run to minimize repeated scrapes.
+    :param pages_got:
     :param location:
     :param job:
     :param total_jobs:
-    :param pages_scraped:
+    :param pages_wanted:
     :return:
     """
     # create data folder
     Path(f"data/{job.strip().lower()}-{location.strip().lower()}").mkdir(parents=True, exist_ok=True)
-    chdir(f"data/{job.strip().lower()}-{location.strip().lower()}")
+    file_path = Path(f"data/{job.strip().lower()}-{location.strip().lower()}")
     # create df from data
     jobs_df = pd.DataFrame(total_jobs)
 
     # naming convention
-    file_path = "scrape"
-    file_path += datetime.now().strftime("_%d-%m-%Y_%H-%M-%S")
-    file_path += f"_{pages_scraped}-pgs"
+    file = ""
+    # if requested is less than actual pages got, then clearly we have hit the maximal pages that query can ever return
+    # so we tag that file, and for loading we can query based on if a file begins with max
+    if pages_wanted > pages_got:
+        file += "maxscrape"
+    else:
+        file += "scrape"
+    file += datetime.now().strftime("_%d-%m-%Y_%H-%M-%S")
+    file += f"_{pages_got}-pgs"
+
+    full_file_path = file_path/file
 
     # save as a serialized pickle file
-    jobs_df.to_pickle(file_path)
-    print(f"Saved data into {file_path}\n")
-    return file_path
+    jobs_df.to_pickle(full_file_path)
+    print(f"Saved data into {full_file_path}\n")
+    return full_file_path
 
 
-def read_last_run(job: str, location: str) -> str:
+def read_last_run(job: str, location: str, pages_wanted: int) -> str:
     """
     Checks the "data" folder to find latest data output from previous runs.
     :return: string path to the latest created file based on recency/optimal needs
@@ -178,18 +185,22 @@ def read_last_run(job: str, location: str) -> str:
                 max_pgs_scraped = curr_file_pgs
                 latest_file = file
 
-        # check to see if all data was recently acquired (~ 3 hours)
+        # check to see if all data was recently acquired (~ 10 hours)
         latest_file_datetime = datetime.fromtimestamp(path.getctime(latest_file))
         print(f"Max pages scraped is {max_pgs_scraped} on {latest_file_datetime}\n")
-        check_date = datetime.now() - timedelta(hours=3)
+        check_date = datetime.now() - timedelta(hours=10)
 
-        # if date of creation of our data is older than 3 hours from present, get fresh data
+        if latest_file.split('/')[2].startswith('scrape') and max_pgs_scraped < pages_wanted:
+            print(f"Requested more pages than maximum scraped till date {max_pgs_scraped}\n")
+            latest_file = None
+
+        # if date of creation of our data is older than 10 hours from present, get fresh data
         if latest_file_datetime < check_date:
             print("Data is stale, fetching new data...\n")
             latest_file = None
 
         # also automatically purge older data files
-        if len(existing_files) > 2:
+        if len(existing_files) > 5:
             print("Cleaning up and removing some older/unused files...\n")
             oldest_file = min(existing_files, key=path.getctime)
             remove(oldest_file)
@@ -232,6 +243,7 @@ def scrape_jobs(job: str, location: str, total_pages: int) -> tuple:
     """
     # initialize
     all_jobs = []
+    max_actual_pages = None
 
     # Main Search
     driver = search_job(job, location)
@@ -243,41 +255,47 @@ def scrape_jobs(job: str, location: str, total_pages: int) -> tuple:
         search_results = searchable_items(driver)
         all_jobs.extend(get_per_page_info(driver, search_results))
         has_next_page, next_locator = has_next(driver)
-        elapsed_time = datetime.now()-start_time
-        logging.info(f"Page {curr_page+1} done in {elapsed_time.total_seconds()}s")
+        elapsed_time = datetime.now() - start_time
+        logging.info(f"Page {curr_page + 1} done in {elapsed_time.total_seconds()}s")
         if has_next_page:
             next_locator.click()
             continue
         else:
-            total_pages = curr_page+1
-            driver.quit()
+            max_actual_pages = curr_page + 1
             break
 
-    return all_jobs, total_pages
+    driver.quit()
+
+    return all_jobs, total_pages, max_actual_pages
 
 
-def main() -> None:
+def initialize(job: str, location: str, pages: int) -> pd.DataFrame:
     """
     Driver function
     """
     # init
     jobs_df = None
-    pages_to_scrape = int(getenv("PAGES") or 100)
+    logging.disable(True)
+    pages_to_scrape = int(getenv("PAGES") or pages or 100)
     # if prev runs exist, load data instead of scraping
-    job, location = "Software Developer", "Toronto, ON"
-    latest_file_path = read_last_run(job, location)
+    latest_file_path = read_last_run(job, location, pages_to_scrape)
 
     if latest_file_path is not None:
         jobs_df = load_jobs_from_file(latest_file_path)
     else:
+        # set logging
+        log_file = f"logs/run-{datetime.now()}.log"
+        logging.basicConfig(filename=log_file, level=logging.INFO)
         # run scraper and destructure out data for other functions
-        all_jobs, total_pages = scrape_jobs(job, location, pages_to_scrape)
+        all_jobs, pages_wanted, pages_actual = scrape_jobs(job, location, pages_to_scrape)
         # save all data from a run
-        data_file = save_run_data(all_jobs, total_pages, job, location)
+        data_file = save_run_data(all_jobs, pages_wanted, pages_actual, job, location)
         jobs_df = load_jobs_from_file(data_file)
 
-    print(jobs_df)
+    return jobs_df
 
 
+# if run standalone, it will try to scrape 2 pages of Software Development Jobs
+# in Toronto, ON as a demo, and print out the dataframe to console
 if __name__ == '__main__':
-    main()
+    print(initialize("Software Developer", "Toronto, ON", 2))
