@@ -4,7 +4,7 @@ from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
-from scraper import initialize
+from scraper import initialize, load_jobs_from_file
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -49,6 +49,7 @@ def search(n_clicks: int, job_value: str, loc_value: str, pages: int):
     if n_clicks is not None:
         if job_value is not None and loc_value is not None and pages is not None:
             jobs_df = initialize(job_value, loc_value, pages)
+            # jobs_df = load_jobs_from_file("data/software developer-toronto, on/maxscrape_11-11-2020_01-50-01_94-pgs")
             columns = [{'name': i, "id": i} for i in
                        jobs_df[jobs_df.columns[~jobs_df.columns.isin(['job_description'])]]]
             data = jobs_df.to_dict('records')

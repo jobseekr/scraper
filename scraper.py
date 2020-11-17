@@ -6,7 +6,7 @@ Scrape jobs off of Canadian Indeed
 """
 
 from datetime import datetime, timedelta
-from os import path, getenv, remove, chdir
+from os import path, getenv, remove
 import logging
 import glob
 
@@ -188,7 +188,7 @@ def read_last_run(job: str, location: str, pages_wanted: int) -> str:
         # check to see if all data was recently acquired (~ 10 hours)
         latest_file_datetime = datetime.fromtimestamp(path.getctime(latest_file))
         print(f"Max pages scraped is {max_pgs_scraped} on {latest_file_datetime}\n")
-        check_date = datetime.now() - timedelta(hours=10)
+        check_date = datetime.now() - timedelta(hours=20)
 
         if latest_file.split('/')[2].startswith('scrape') and max_pgs_scraped < pages_wanted:
             print(f"Requested more pages than maximum scraped till date {max_pgs_scraped}\n")
@@ -257,11 +257,11 @@ def scrape_jobs(job: str, location: str, total_pages: int) -> tuple:
         has_next_page, next_locator = has_next(driver)
         elapsed_time = datetime.now() - start_time
         logging.info(f"Page {curr_page + 1} done in {elapsed_time.total_seconds()}s")
+        max_actual_pages = curr_page + 1
         if has_next_page:
             next_locator.click()
             continue
         else:
-            max_actual_pages = curr_page + 1
             break
 
     driver.quit()
@@ -298,4 +298,5 @@ def initialize(job: str, location: str, pages: int) -> pd.DataFrame:
 # if run standalone, it will try to scrape 2 pages of Software Development Jobs
 # in Toronto, ON as a demo, and print out the dataframe to console
 if __name__ == '__main__':
-    print(initialize("Software Developer", "Toronto, ON", 2))
+    print(initialize("accountant", "Toronto, ON", 5))
+    # print(load_jobs_from_file("data/software developer-toronto, on/scrape_13-11-2020_15-33-13_100-pgs")["job_description"][1])
