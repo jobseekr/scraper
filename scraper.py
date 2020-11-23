@@ -80,7 +80,7 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
         jobs = []
         for title in tqdm(search_items):
             title.find_element_by_xpath('..').click()
-            job_container = WebDriverWait(web_driver, 5).until(
+            job_container = WebDriverWait(web_driver, 10).until(
                 EC.presence_of_element_located((By.ID, "vjs-container"))
             )
             info_container = job_container.find_element_by_id("vjs-jobinfo")
@@ -124,7 +124,7 @@ def popup_handler(web_driver: WebDriver) -> None:
     """
     try:
         # check if there's a popup upon hitting the new page
-        popup_container = WebDriverWait(web_driver, 5).until(
+        popup_container = WebDriverWait(web_driver, 10).until(
             EC.presence_of_element_located((By.ID, "popover-foreground"))
         )
         # if there is, close it and continue as usual
@@ -269,14 +269,14 @@ def scrape_jobs(job: str, location: str, total_pages: int) -> tuple:
     return all_jobs, total_pages, max_actual_pages
 
 
-def initialize(job: str, location: str, pages: int) -> pd.DataFrame:
+def initialize(job: str, location: str, pages: int = 120) -> pd.DataFrame:
     """
     Driver function
     """
     # init
     jobs_df = None
     logging.disable(True)
-    pages_to_scrape = int(getenv("PAGES") or pages or 100)
+    pages_to_scrape = int(getenv("PAGES") or pages)
     # if prev runs exist, load data instead of scraping
     latest_file_path = read_last_run(job, location, pages_to_scrape)
 
@@ -298,5 +298,6 @@ def initialize(job: str, location: str, pages: int) -> pd.DataFrame:
 # if run standalone, it will try to scrape 2 pages of Software Development Jobs
 # in Toronto, ON as a demo, and print out the dataframe to console
 if __name__ == '__main__':
-    print(initialize("accountant", "Toronto, ON", 5))
-    # print(load_jobs_from_file("data/software developer-toronto, on/scrape_13-11-2020_15-33-13_100-pgs")["job_description"][1])
+    print(initialize("Software Developer", "Toronto, ON"))
+    # print(load_jobs_from_file("data/software developer-toronto, on/scrape_13-11-2020_15-33-13_100-pgs")[
+    # "job_description"][1])
