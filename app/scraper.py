@@ -15,7 +15,6 @@ from selenium import webdriver
 from time import sleep
 from pathlib import Path
 
-from selenium.common.exceptions import StaleElementReferenceException
 from tqdm import tqdm
 import pandas as pd
 from selenium.webdriver.chrome.options import Options
@@ -23,7 +22,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from job import Job
+from .job import Job
 import random
 
 load_dotenv()
@@ -234,7 +233,7 @@ def searchable_items(web_driver: WebDriver) -> list:
         # then attempt to populate search results
 
         search_results = web_driver.find_elements_by_xpath("//a[@data-tn-element='jobTitle']")
-        if search_results:
+        if search_results is not None:
             return search_results
     except Exception as err:
         print(f"\nCould not find job-titles from search " + str(err))
@@ -302,6 +301,5 @@ def initialize(job: str, location: str, pages: int = 120) -> pd.DataFrame:
 # if run standalone, it will try to scrape 2 pages of Software Development Jobs
 # in Toronto, ON as a demo, and print out the dataframe to console
 if __name__ == '__main__':
-    print(initialize("Software Developer", "Toronto, ON"))
-    # print(load_jobs_from_file("data/software developer-toronto, on/scrape_13-11-2020_15-33-13_100-pgs")[
-    # "job_description"][1])
+    print(initialize("Software Developer", "Toronto, ON", 3))
+

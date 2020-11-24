@@ -1,10 +1,10 @@
 from dash.exceptions import PreventUpdate
-from scraper import initialize
+from ..scraper import initialize
 from dash.dependencies import Input, Output, State
 
 
-def register_callbacks(dashapp):
-    @dashapp.callback(
+def register_callbacks(dash_app):
+    @dash_app.callback(
         [Output('jobs-table', 'columns'),
          Output('jobs-table', 'data')],
         [Input('submit-search', 'n_clicks')],

@@ -1,6 +1,7 @@
+import dash
+import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
-import dash_table
 
 
 def serve_layout():
@@ -25,3 +26,15 @@ def serve_layout():
             dash_table.DataTable(id='jobs-table')
         ])
     ])
+
+
+def init_dashboard(server):
+    external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+    dash_app = dash.Dash(
+        server=server,
+        routes_pathname_prefix='/dashboard/',
+        external_stylesheets=external_stylesheets
+    )
+    dash_app.layout = serve_layout
+    return dash_app.server
+
