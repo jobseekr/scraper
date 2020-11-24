@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 from selenium import webdriver
 from time import sleep
 from pathlib import Path
+
+from selenium.common.exceptions import StaleElementReferenceException
 from tqdm import tqdm
 import pandas as pd
 from selenium.webdriver.chrome.options import Options
@@ -80,7 +82,7 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
         jobs = []
         for title in tqdm(search_items):
             title.find_element_by_xpath('..').click()
-            job_container = WebDriverWait(web_driver, 10).until(
+            job_container = WebDriverWait(web_driver, 5).until(
                 EC.presence_of_element_located((By.ID, "vjs-container"))
             )
             info_container = job_container.find_element_by_id("vjs-jobinfo")
@@ -94,7 +96,7 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
             # create new Job object
             a_job = Job(job_title, job_cp, job_loc, job_desc, full_chunk)
             jobs.append(a_job.as_dict())
-            sleep(random.randint(1, 3))
+            sleep(random.randint(2, 4))
         return jobs
     except Exception as err:
         print(f"Error retrieving job info: " + str(err))
@@ -161,7 +163,7 @@ def save_run_data(total_jobs: list, pages_wanted: int, pages_got: int, job: str,
     file += datetime.now().strftime("_%d-%m-%Y_%H-%M-%S")
     file += f"_{pages_got}-pgs"
 
-    full_file_path = file_path/file
+    full_file_path = file_path / file
 
     # save as a serialized pickle file
     jobs_df.to_pickle(full_file_path)
@@ -230,8 +232,10 @@ def searchable_items(web_driver: WebDriver) -> list:
         # first check of any pesky popovers and close them
         popup_handler(web_driver)
         # then attempt to populate search results
+
         search_results = web_driver.find_elements_by_xpath("//a[@data-tn-element='jobTitle']")
-        return search_results
+        if search_results:
+            return search_results
     except Exception as err:
         print(f"\nCould not find job-titles from search " + str(err))
 
