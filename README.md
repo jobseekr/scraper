@@ -40,21 +40,16 @@ should emit the following directory structure
 │   ├── __init__.py
 │   ├── dashapp
 │   │   ├── __init__.py
-│   │   ├── callbacks.py
 │   │   └── seeker.py
 │   ├── job.py
 │   ├── routes.py
 │   └── scraper.py
 ├── data
 │   └── software\ developer-toronto,\ on
-│       ├── maxscrape_11-11-2020_01-50-01_94-pgs
-│       ├── maxscrape_17-11-2020_18-53-21_73-pgs
-│       ├── maxscrape_20-11-2020_13-26-10_100-pgs
-│       ├── scrape_10-11-2020_06-18-02_90-pgs
-│       ├── scrape_13-11-2020_15-33-13_100-pgs
-│       └── scrape_24-11-2020_01-11-08_3-pgs
+│       ├── scrape_24-11-2020_15-37-16_2-pgs
+│       └── scrape_24-11-2020_17-33-36_3-pgs
 ├── logs
-│   └── run-2020-11-24\ 01:06:58.498820.log
+│   └── run-2020-11-24\ 17:30:06.550725.log
 ├── requirements.txt
 ├── utils
 │   └── chromedriver
