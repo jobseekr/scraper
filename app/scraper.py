@@ -22,7 +22,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from .job import Job
+from app.job import Job
 import random
 
 load_dotenv()
@@ -165,7 +165,7 @@ def save_run_data(total_jobs: list, pages_wanted: int, pages_got: int, job: str,
     full_file_path = file_path / file
 
     # save as a serialized pickle file
-    jobs_df.to_pickle(full_file_path)
+    jobs_df.to_excel(full_file_path, engine='xlsxwriter', index=False)
     print(f"Saved data into {full_file_path}\n")
     return full_file_path
 
@@ -215,7 +215,7 @@ def load_jobs_from_file(file_path: str) -> pd.DataFrame:
     :param file_path: path to pickle file
     :return:
     """
-    job_df = pd.read_pickle(file_path)
+    job_df = pd.read_excel(file_path)
     return job_df
 
 
@@ -301,5 +301,5 @@ def initialize(job: str, location: str, pages: int = 120) -> pd.DataFrame:
 # if run standalone, it will try to scrape 2 pages of Software Development Jobs
 # in Toronto, ON as a demo, and print out the dataframe to console
 if __name__ == '__main__':
-    print(initialize("Software Developer", "Toronto, ON", 3))
+    print(initialize("Software Developer", "Toronto, ON", 2))
 
