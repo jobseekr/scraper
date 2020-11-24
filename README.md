@@ -12,12 +12,15 @@ Currently supported websites:
 1. Create a virtual env for the project `python -m venv venv`
 2. Install the requirements `pip install -r requirements.txt`
 3. Create an env file at the project root using `touch .env` and add variables as per `.env.example` to configure
-4. Run `scraper.py`
+4. Run `scraper.py` located within `app` with your own params for the main function.
 
-#### Dash Web App
+#### Flask Web App
 
-1. Run `seeker.py`
-2. Type in your params (these is a direct representation of the `.env` params) and click search.
+The web app uses Factory Pattern to encase a Dash App within a Flask app. 
+
+1. `wsgi.py` is the entry point for the Flask app
+2. Navigate to `/dashboard/` route to see the Dash app
+3. Type in your params (these is a direct representation of the `.env` params) and click search.
 
 
 ## Directory Structure
@@ -32,21 +35,30 @@ should emit the following directory structure
 
 ```shell script
 .
-├── .env
-├── .env.example
-├── .gitignore
 ├── README.md
+├── app
+│   ├── __init__.py
+│   ├── dashapp
+│   │   ├── __init__.py
+│   │   ├── callbacks.py
+│   │   └── seeker.py
+│   ├── job.py
+│   ├── routes.py
+│   └── scraper.py
 ├── data
 │   └── software\ developer-toronto,\ on
-│       └── scrape_10-11-2020_06-52-09_2-pgs
-├── job.py
+│       ├── maxscrape_11-11-2020_01-50-01_94-pgs
+│       ├── maxscrape_17-11-2020_18-53-21_73-pgs
+│       ├── maxscrape_20-11-2020_13-26-10_100-pgs
+│       ├── scrape_10-11-2020_06-18-02_90-pgs
+│       ├── scrape_13-11-2020_15-33-13_100-pgs
+│       └── scrape_24-11-2020_01-11-08_3-pgs
 ├── logs
-│   └── run-2020-11-10\ 06:50:20.597174.log
-├── scraper.py
-├── seeker.py
+│   └── run-2020-11-24\ 01:06:58.498820.log
 ├── requirements.txt
-└── utils
-    └── chromedriver
+├── utils
+│   └── chromedriver
+└── wsgi.py
 ```
 #### Notes
 **data**: the data folder will contain all the scraped data pickles with each folder within referring to the job title queried along with the location.  
@@ -61,9 +73,9 @@ INFO:root:Page 2 done in 48.49284s
 ```
 
 As visible, there are simple optimizations to prevent the scraper from getting blocked/throttled by indeed.  
-If a page scrape takes roughly `52s`, a 90 page scrape (most I've run) of `"Software Developer"` jobs in `"Toronto, ON"` will run for roughly `1.32 hrs`.
+If a page scrape takes roughly `52s`, a 100 page scrape (most I've run) of `"Software Developer"` jobs in `"Toronto, ON"` will run for roughly `1.32 hrs`.
 
-I don't advise it, but you can play around with [line 99](https://github.com/jobseekr/scraper/blob/cecbcc94a38766f25f57a8c02d5ac3d6ead3819b/main.py#L99) to speed up this process a LOT more by either reducing or completely eliminating `sleep`
+Especially if running in headless mode (which would be through the wsgi app), I strongly suggest running large scrapes once in a blue moon and instead opting to keep to a small amount of pages each time (10-20) so that your client doesn't get blocked by Indeed. If that does happen, use a proxy or try again within 3 hours and it should start working again.
 
 #### Author
 
