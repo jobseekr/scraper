@@ -4,6 +4,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 from dash.exceptions import PreventUpdate
 from app.scraper import initialize
+from .helpers import get_most_popular_tech, format_data
 from dash.dependencies import Input, Output, State
 
 
@@ -27,7 +28,15 @@ def serve_layout():
         ], style={'padding-top': '20px'}),
         html.Div(id='data-table-container', children=[
             dash_table.DataTable(id='jobs-table')
-        ])
+        ]),
+        dcc.Tabs(id='graph-tabs', children=[
+            # Prevalent Tech
+            dcc.Tab(label='Most Popular Tech', value='tech'),
+            dcc.Tab(label='Most Popular Languages', value='lang'),
+            dcc.Tab(label='Compensation to Skill', value='skill'),
+            dcc.Tab(label='Role Spread', value='role'),
+        ]),
+        html.Div(id='tabs-content')
     ])
 
 
@@ -59,5 +68,36 @@ def init_dashboard(server):
         else:
             raise PreventUpdate
 
-    return dash_app.server
+    @dash_app.callback(Output('tabs-content', 'children'),
+                       Input('graph-tabs', 'value'),
+                       [State('job-query', 'value'),
+                        State('job-loc-query', 'value'),
+                        State('pages-query', 'value')]
+                       )
+    def render_content(tab, job_value: str, loc_value: str, pages: int):
+        jobs_df = None
+        if job_value is not None and loc_value is not None and pages is not None:
+            jobs_df = initialize(job_value, loc_value, pages)
 
+        if tab == 'tech':
+            try:
+                format_data(jobs_df)
+                return html.Div([
+                    html.H5('Most Popular Tech')
+                ])
+            except Exception as err:
+                print(err)
+        elif tab == 'lang':
+            return html.Div([
+                html.H5('Most Popular Languages')
+            ])
+        elif tab == 'skill':
+            return html.Div([
+                html.H5('Compensation to Skill')
+            ])
+        elif tab == 'role':
+            return html.Div([
+                html.H5('Role Spread')
+            ])
+
+    return dash_app.server

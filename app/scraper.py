@@ -21,12 +21,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from app.job import Job
 import random
 
 load_dotenv()
-start_url = "https://ca.indeed.com/browsejobs"
+start_url = "https://ca.indeed.com/advanced_search"
 
 
 def set_chrome_options(env: str) -> Options:
@@ -57,10 +57,18 @@ def search_job(what: str, where: str) -> WebDriver:
     try:
         driver = webdriver.Chrome(getenv("WEBDRIVER_PATH"), options=set_chrome_options(getenv("ENVIRONMENT")))
         driver.get(start_url)
-        job_title_input = driver.find_element_by_id("what")
+        job_title_input = driver.find_element_by_id("as_and")
         location_input = driver.find_element_by_id("where")
         job_title_input.send_keys(what)
         location_input.send_keys(where)
+        select_job_age = Select(driver.find_element_by_id('fromage'))
+        select_job_age.select_by_value('1')
+        select_job_radius = Select(driver.find_element_by_id('radius'))
+        select_job_radius.select_by_value('100')
+        select_job_limit = Select(driver.find_element_by_id('limit'))
+        select_job_limit.select_by_value('50')
+        select_job_sort = Select(driver.find_element_by_id('sort'))
+        select_job_sort.select_by_value('date')
         driver.find_element_by_id("fj").click()
         driver.implicitly_wait(10)
         return driver
@@ -81,6 +89,7 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
         jobs = []
         for title in tqdm(search_items):
             title.find_element_by_xpath('..').click()
+            web_driver.implicitly_wait(5)
             job_container = WebDriverWait(web_driver, 5).until(
                 EC.presence_of_element_located((By.ID, "vjs-container"))
             )
@@ -95,7 +104,7 @@ def get_per_page_info(web_driver: WebDriver, search_items: list) -> list:
             # create new Job object
             a_job = Job(job_title, job_cp, job_loc, job_desc, full_chunk)
             jobs.append(a_job.as_dict())
-            sleep(random.randint(2, 4))
+            sleep(1+random.random()*4)
         return jobs
     except Exception as err:
         print(f"Error retrieving job info: " + str(err))
@@ -301,5 +310,5 @@ def initialize(job: str, location: str, pages: int = 120) -> pd.DataFrame:
 # if run standalone, it will try to scrape 2 pages of Software Development Jobs
 # in Toronto, ON as a demo, and print out the dataframe to console
 if __name__ == '__main__':
-    print(initialize("Software Developer", "Toronto, ON", 2))
+    print(initialize("Software Engineer", "Toronto, ON", 1))
 
