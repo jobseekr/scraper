@@ -57,7 +57,9 @@ should emit the following directory structure
 ```
 #### Notes
 **data**: the data folder will contain all the scraped data pickles with each folder within referring to the job title queried along with the location.  
-**logs**: the logs folder will contain a log of the run with detail at the info level.  
+**logs**: the logs folder will contain a log of the run with detail at the info level.
+
+Especially if running in headless mode (which would be through the wsgi app), I strongly suggest running large scrapes once in a blue moon and instead opting to keep to a small amount of pages each time (1-20) so that your client doesn't get blocked by Indeed. If that does happen, use a proxy or try again within 3 hours and it should start working again. You might also get captcha walled which the program currently doesn't handle.
 
 There is logic implemented to automatically update data pickles for repeat runs if data seems to be outdated and pickles are reused to minimize constant scrapes.
 
@@ -69,8 +71,6 @@ INFO:root:Page 2 done in 48.49284s
 
 As visible, there are simple optimizations to prevent the scraper from getting blocked/throttled by indeed.  
 If a page scrape takes roughly `52s`, a 100 page scrape (most I've run) of `"Software Developer"` jobs in `"Toronto, ON"` will run for roughly `1.32 hrs`.
-
-Especially if running in headless mode (which would be through the wsgi app), I strongly suggest running large scrapes once in a blue moon and instead opting to keep to a small amount of pages each time (10-20) so that your client doesn't get blocked by Indeed. If that does happen, use a proxy or try again within 3 hours and it should start working again.
 
 #### Author
 
