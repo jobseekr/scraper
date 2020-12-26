@@ -61,7 +61,7 @@ should emit the following directory structure
 
 Especially if running in headless mode (which would be through the wsgi app), I strongly suggest running large scrapes once in a blue moon and instead opting to keep to a small amount of pages each time (1-20) so that your client doesn't get blocked by Indeed. If that does happen, use a proxy or try again within 3 hours and it should start working again. You might also get captcha walled which the program currently doesn't handle.
 
-There is logic implemented to automatically update data pickles for repeat runs if data seems to be outdated and pickles are reused to minimize constant scrapes.
+There is logic implemented to automatically update data for repeat runs if data seems to be outdated and data is reused to minimize multiple scrapes.
 
 **Sample log file**  
 ```text
